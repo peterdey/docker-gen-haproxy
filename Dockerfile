@@ -1,5 +1,5 @@
 FROM haproxy:latest
-MAINTAINER MAINTAINER Loup <loup@redice-inc.com>
+MAINTAINER Loup <loup@redice-inc.com>
 
 # Install wget and install/updates certificates
 RUN apt-get update \
