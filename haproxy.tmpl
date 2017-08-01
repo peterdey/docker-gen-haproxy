@@ -1,0 +1,38 @@
+defaults
+  mode http
+  timeout connect 3000ms
+  timeout client 5m
+  timeout server 5m
+  option redispatch
+  maxconn 5000
+  retries 3
+
+frontend stats
+  bind *:8081
+  stats enable
+  stats hide-version
+  stats uri /
+
+frontend proxy
+  bind *:80
+
+{{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
+  {{ $host := trim $host }}
+  {{ $backend_name := (sha1 $host) }}
+  # {{ $host }}
+  acl {{ $backend_name }}_acl hdr(Host) -i {{ $host }}
+  use_backend {{ $host }} if {{ $backend_name }}_acl
+{{ end }}
+
+
+{{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
+{{ $host := trim $host }}
+{{ $backend_name := (sha1 $host) }}
+backend {{ $host }}
+  balance roundrobin
+{{ range $c, $value := $containers }}
+{{ range $n, $network := $value.Networks }}
+  server {{ $host }}_docker_{{ $c }}_{{ $n }} {{ $network.IP }}:80 check
+{{ end }}
+{{ end }}
+{{ end }}
