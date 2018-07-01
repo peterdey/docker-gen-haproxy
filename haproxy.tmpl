@@ -8,31 +8,36 @@ defaults
   retries 3
 
 frontend stats
-  bind *:8081
+  bind *:{{ .Env.STATS_PORT }}
   stats enable
   stats hide-version
   stats uri /
 
-frontend proxy
-  bind *:80
-
-{{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
-  {{ $host := trim $host }}
-  {{ $backend_name := (sha1 $host) }}
-  # {{ $host }}
-  acl {{ $backend_name }}_acl hdr(Host) -i {{ $host }}
-  use_backend {{ $host }} if {{ $backend_name }}_acl
+{{ $myId := .Docker.CurrentContainerID }}
+{{ range $host, $me := where $ "ID" $myId }}
+{{ range $key, $ports := whereNot $me.Addresses ".Port" $.Env.STATS_PORT }}
+frontend port_{{ $ports.Port }}
+  bind *:{{ $ports.Port }}
+  {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
+  {{ range $key, $container := $containers }}
+  {{ $addrLen := len $container.Addresses }}
+  {{ if gt $addrLen 0 }}
+  acl {{ $container.Name }}_acl hdr(Host) -i {{ $host }}
+  use_backend service_{{ $container.Name }} if {{ $container.Name }}_acl
+  {{  end  }}
+  {{ end }}
+  {{ end }}
+{{ end }}
 {{ end }}
 
-
 {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
-{{ $host := trim $host }}
-{{ $backend_name := (sha1 $host) }}
-backend {{ $host }}
-  balance roundrobin
-{{ range $c, $value := $containers }}
-{{ range $n, $network := $value.Networks }}
-  server {{ $host }}_docker_{{ $c }}_{{ $n }} {{ $network.IP }}:80 check
-{{ end }}
+{{ range $key, $container := $containers }}
+{{ $addrLen := len $container.Addresses }}
+{{ if gt $addrLen 0 }}
+backend service_{{ $container.Name }}
+  {{ range $address := $container.Addresses }}
+  server {{ $container.Name}} {{ $address.IP }}:{{ $address.Port }} check
+  {{ end }}
+  {{  end  }}
 {{ end }}
 {{ end }}
