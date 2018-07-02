@@ -19,6 +19,7 @@ WORKDIR /app/
 
 ENV DOCKER_HOST unix:///tmp/docker.sock
 ENV STATS_PORT 1936
+ENV SSL_CERT_FILE /certs/certificate.pem
 
 EXPOSE 80
 EXPOSE 443

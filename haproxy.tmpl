@@ -17,7 +17,7 @@ frontend stats
 {{ range $host, $me := where $ "ID" $myId }}
 {{ range $key, $ports := whereNot $me.Addresses ".Port" $.Env.STATS_PORT }}
 frontend port_{{ $ports.Port }}
-  bind *:{{ $ports.Port }}
+  bind *:{{ $ports.Port }} {{ if (eq $ports.Port "443") and (contains .Env "SSL_CERT_FILE") }}{{ if exists $.Env.SSL_CERT_FILE }}ssl crt {{ $.Env.SSL_CERT_FILE }}{{ end }}{{ end }}
   {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
   {{ range $key, $container := $containers }}
   {{ $addrLen := len $container.Addresses }}
