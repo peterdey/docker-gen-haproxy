@@ -23,7 +23,7 @@ frontend port_{{ $ports.Port }}
   {{ $addrLen := len $container.Addresses }}
   {{ if gt $addrLen 0 }}
   acl {{ $container.Name }}_acl hdr(Host) -i {{ $host }}
-  use_backend service_{{ $container.Name }} if {{ $container.Name }}_acl
+  use_backend {{ $host }} if {{ $container.Name }}_acl
   {{  end  }}
   {{ end }}
   {{ end }}
@@ -31,10 +31,10 @@ frontend port_{{ $ports.Port }}
 {{ end }}
 
 {{ range $host, $containers := groupByMulti $ "Env.VIRTUAL_HOST" "," }}
+backend {{ $host }}
 {{ range $key, $container := $containers }}
 {{ $addrLen := len $container.Addresses }}
 {{ if gt $addrLen 0 }}
-backend service_{{ $container.Name }}
   {{ range $address := $container.Addresses }}
   server {{ $container.Name}} {{ $address.IP }}:{{ $address.Port }} check
   {{ end }}
